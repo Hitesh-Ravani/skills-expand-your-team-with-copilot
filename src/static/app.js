@@ -568,6 +568,9 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         `
         }
+        <button class="share-button" data-activity="${name}" aria-label="Share this activity">
+          <span class="share-icon">🔗</span> Share
+        </button>
       </div>
     `;
 
@@ -587,7 +590,125 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    // Add click handler for share button
+    const shareButton = activityCard.querySelector(".share-button");
+    shareButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      shareActivity(name, details, event.currentTarget);
+    });
+
     activitiesList.appendChild(activityCard);
+  }
+
+  // Share an activity using Web Share API or a fallback popover
+  function shareActivity(name, details, triggerButton) {
+    const schedule = formatSchedule(details);
+    const shareText = `${name} – ${details.description} | Schedule: ${schedule}`;
+    const shareUrl = window.location.href;
+
+    // Use native Web Share API if available (works great on mobile)
+    if (navigator.share) {
+      navigator
+        .share({ title: name, text: shareText, url: shareUrl })
+        .catch((err) => {
+          if (err.name !== "AbortError") {
+            console.error("Share failed:", err);
+          }
+        });
+      return;
+    }
+
+    // Fallback: show a small sharing popover
+    showSharePopover(name, shareText, shareUrl, triggerButton);
+  }
+
+  // Show a share popover near the clicked button
+  function showSharePopover(name, shareText, shareUrl, triggerButton) {
+    // Remove any existing popover first
+    const existingPopover = document.getElementById("share-popover");
+    if (existingPopover) {
+      existingPopover.remove();
+    }
+
+    const encodedUrl = encodeURIComponent(shareUrl);
+    const encodedText = encodeURIComponent(shareText);
+    const encodedName = encodeURIComponent(name);
+
+    const popover = document.createElement("div");
+    popover.id = "share-popover";
+    popover.className = "share-popover";
+    popover.innerHTML = `
+      <div class="share-popover-title">Share this activity</div>
+      <div class="share-options">
+        <a class="share-option share-twitter" href="https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}" target="_blank" rel="noopener noreferrer">
+          <span class="share-option-icon">𝕏</span> X / Twitter
+        </a>
+        <a class="share-option share-whatsapp" href="https://wa.me/?text=${encodedText}%20${encodedUrl}" target="_blank" rel="noopener noreferrer">
+          <span class="share-option-icon">💬</span> WhatsApp
+        </a>
+        <a class="share-option share-facebook" href="https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}" target="_blank" rel="noopener noreferrer">
+          <span class="share-option-icon">📘</span> Facebook
+        </a>
+        <a class="share-option share-email" href="mailto:?subject=${encodedName}&body=${encodedText}%20${encodedUrl}">
+          <span class="share-option-icon">✉️</span> Email
+        </a>
+        <button class="share-option share-copy" id="share-copy-btn">
+          <span class="share-option-icon">📋</span> Copy Link
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(popover);
+
+    // Position the popover above the trigger button
+    const rect = triggerButton.getBoundingClientRect();
+    const popoverWidth = 200;
+    let left = rect.left + rect.width / 2 - popoverWidth / 2 + window.scrollX;
+    // Keep within viewport horizontally
+    left = Math.max(8, Math.min(left, window.innerWidth - popoverWidth - 8));
+    popover.style.left = `${left}px`;
+    popover.style.top = `${rect.top + window.scrollY - popover.offsetHeight - 8}px`;
+
+    // Reposition after the popover renders (so offsetHeight is accurate)
+    requestAnimationFrame(() => {
+      popover.style.top = `${rect.top + window.scrollY - popover.offsetHeight - 8}px`;
+      popover.classList.add("visible");
+    });
+
+    // Copy link button
+    document.getElementById("share-copy-btn").addEventListener("click", () => {
+      navigator.clipboard
+        .writeText(shareUrl)
+        .then(() => {
+          const copyBtn = document.getElementById("share-copy-btn");
+          if (copyBtn) {
+            copyBtn.innerHTML = '<span class="share-option-icon">✅</span> Copied!';
+            setTimeout(() => popover.remove(), 1200);
+          }
+        })
+        .catch(() => {
+          // Clipboard not available – show a copyable text box inside the popover
+          const shareOptions = popover.querySelector(".share-options");
+          shareOptions.innerHTML = `
+            <p style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:6px;">Copy the link below:</p>
+            <input id="share-url-input" type="text" value="${shareUrl}"
+              style="width:100%;font-size:0.75rem;padding:4px 6px;border:1px solid var(--border);border-radius:4px;"
+              readonly />
+          `;
+          const urlInput = document.getElementById("share-url-input");
+          urlInput.focus();
+          urlInput.select();
+        });
+    });
+
+    // Close popover when clicking elsewhere
+    function onClickOutside(event) {
+      if (!popover.contains(event.target)) {
+        popover.remove();
+        document.removeEventListener("click", onClickOutside);
+      }
+    }
+    document.addEventListener("click", onClickOutside);
   }
 
   // Event listeners for search and filter
