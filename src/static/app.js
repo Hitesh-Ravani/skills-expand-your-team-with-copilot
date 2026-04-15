@@ -1021,6 +1021,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // Check server health and update the status indicator
+  async function checkServerHealth() {
+    const dot = document.getElementById("status-dot");
+    const label = document.getElementById("status-label");
+    try {
+      const response = await fetch("/health");
+      if (response.ok) {
+        dot.className = "online";
+        label.textContent = "Online";
+      } else {
+        dot.className = "offline";
+        label.textContent = "Degraded";
+      }
+    } catch {
+      dot.className = "offline";
+      label.textContent = "Offline";
+    }
+  }
+
   // Expose filter functions to window for future UI control
   window.activityFilters = {
     setDayFilter,
@@ -1031,4 +1050,6 @@ document.addEventListener("DOMContentLoaded", () => {
   checkAuthentication();
   initializeFilters();
   fetchActivities();
+  checkServerHealth();
+  setInterval(checkServerHealth, 30000);
 });

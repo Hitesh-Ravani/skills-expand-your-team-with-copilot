@@ -805,3 +805,27 @@ footer {
 [data-theme="dark"] .activity-tag[data-type="academic"]   { background: #0d2a45; color: #90caf9; }
 [data-theme="dark"] .activity-tag[data-type="community"]  { background: #3a2000; color: #ffb74d; }
 [data-theme="dark"] .activity-tag[data-type="technology"] { background: #2a2d6e; color: #9fa8da; }
+
+/* Server status indicator */
+#server-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: white;
+  opacity: 0.9;
+}
+
+#status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #9ca3af;
+  display: inline-block;
+  transition: background-color 0.4s;
+}
+
+#status-dot.online  { background-color: #22c55e; }
+#status-dot.offline { background-color: #ef4444; }
+
+[data-theme="dark"] #server-status { color: #e5e7eb; }
